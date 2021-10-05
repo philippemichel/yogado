@@ -1,4 +1,4 @@
 # yogado
 yoga &amp; douleur chronique - rétrospectif
 
-Juste le code R, pas lmes données ni les résultats
+Juste le code R, pas les données ni les résultats
