@@ -1,0 +1,65 @@
+---
+title: "YOGADO"
+subtitle: "Plan d'analyse"
+thanks: "Dr BOREL-KUHNER - Soins palliatifs - Douleur"
+author: "Philippe MICHEL"
+date: 29/06/2022
+format: pdf
+pdf-engine: lualatex
+documentclass: scrartcl
+mainfont: Adobe Garamond Pro
+mainfontoptions:
+- Ligatures = Common
+- Ligatures = Rare
+sansfont: Trajan Pro
+monofont: Source Sans Pro
+mathfont: Source Sans Pro
+monofontoptions: Numbers = Monospaced
+mathfontoptions: Numbers = Monospaced
+colorlinks: true
+fontsize: 10pt
+papersize: a4
+lang: fr
+fig-align: center
+toc: false
+lof: false
+lot: false
+cite-method: natbib
+bibliography: stat.bib
+license: CC BY-SA
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = FALSE) 
+```
+
+Ce document ne concerne que l'analyse statistique des données.
+
+L'analyse sera réalisée en intention de traiter. Le risque $\alpha$ retenu est de 0,05 & la puissance de 0,8. Des graphiques seront réalisés pour tous les résultats intéressants.
+
+## Description de la population
+
+La description de la population concerne les données recueillies à l'inclusion :
+
+-   Données démographiques
+-   Activité
+-   Motif de la consultation
+-   Description de la douleur
+-   Traitements en cours
+
+Les variables numériques seront traitées après transformation en catégories.
+
+## Objectif principal
+
+Le critère principal est la baisse de la douleur évaluée sur une échelle numérique cotée de 0 à 10. L'hypothèse nulle est une absence de baisse ou une hausse (différence nulle voire positive).Cette différence sera donc étudiée par un test de Student comparant l'échantillon à un valeur nulle.
+
+L'effet éventuel d'une modification de traitement sera prise en compte ainsi que les données recueillies lors de la première consultation par des analyses de variance (ANOVA). Une analyse multivariée par régression linéaire sera ensuite réalisée en incorporant dans un premier temps incorporant les toutes les variables ayant une p-value \< 0,20 sur l'analyse monovariée. Une recherche du meilleur modèle sera ensuite réalisé par un step-by-step descendant. Pour la détermination du meilleur modèle de régression logistique par step-by-step sur le critère principal, on utilisera un jeu de données après imputation des données manquantes. Par contre, une fois le modèle retenu, les calculs présentés seront réalisés sur les données réelles.
+
+## Objectifs secondaires
+
+Les objectifs secondaires correspondent à l'évolution de critères binaires entre la consultation d'inclusion & la dernière consultation. Une comparaison simple par un test de $\chi^2$ sera réalisée. Si sur un ou plusieurs critères une modification est mise en évidence, un graphique de flux reprenant toutes les consultations sera réalisé.
+
+## technique
+
+L'analyse statistique sera réalisée grâce au logiciel **R**[@rstat] & à divers packages en particulier *tidyverse*[@tidy], FactoMineR[@facto] & *epiDisplay*[@epid].
