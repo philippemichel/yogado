@@ -60,6 +60,8 @@ L'effet éventuel d'une modification de traitement sera prise en compte ainsi qu
 
 Les objectifs secondaires correspondent à l'évolution de critères binaires entre la consultation d'inclusion & la dernière consultation. Une comparaison simple par un test de $\chi^2$ sera réalisée. Si sur un ou plusieurs critères une modification est mise en évidence, un graphique de flux reprenant toutes les consultations sera réalisé.
 
+L'évolution des thérapeutiques comprend trop de cs possibles pour une analyse. Seule une description sera réalisée.
+
 ## technique
 
 L'analyse statistique sera réalisée grâce au logiciel **R**[@rstat] & à divers packages en particulier *tidyverse*[@tidy], FactoMineR[@facto] & *epiDisplay*[@epid].
