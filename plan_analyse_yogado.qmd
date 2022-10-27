@@ -24,9 +24,9 @@ fig-align: center
 toc: false
 lof: false
 lot: false
-cite-method: natbib
+cite-method: biblatex
 bibliography: stat.bib
-license: CC BY-SA
+license: MIT
 always_allow_html: true
 ---
 

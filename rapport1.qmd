@@ -1,0 +1,377 @@
+---
+title: "YOGADO"
+subtitle: "Rapport 1"
+thanks: "Dr BOREL-KUHNER - Soins palliatifs - Douleur"
+author: "Philippe MICHEL"
+format: pdf
+pdf-engine: lualatex
+documentclass: scrartcl
+mainfont: GaramondPremrPro
+mainfontoptions:
+- Ligatures = Common
+- Ligatures = Rare
+sansfont: Source Sans Pro
+monofont: Source Sans Pro
+colorlinks: true
+fontsize: 10pt
+papersize: a4
+lang: fr
+fig-align: center
+toc: true
+lof: true
+lot: true
+cite-method: biblatex
+bibliography: stat.bib
+license: MIT
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = FALSE) 
+```
+
+```{r lib}
+library(baseph)
+library(janitor)
+library(tidyverse)
+library(lubridate)
+library(kableExtra)
+```
+
+
+## Description de la population
+
+```{r demogi}
+demog <- debutph("datas/CONSULT1.csv")
+demog$evadoulmax <- as.numeric(as.character(demog$evadoulmax))
+demog$evadoulmin <- as.numeric(as.character(demog$evadoulmin))
+demog$evadoulmoy <- as.numeric(as.character(demog$evadoulmoy))
+demog$dmat <- as.numeric(as.character(demog$dmat))
+demog$dds <- as.numeric(as.character(demog$dds))
+demog$qtevie <- as.numeric(as.character(demog$qtevie))
+demog$qtenoralt <- factor(demog$qtenoralt,
+  levels = c("Normale", "Altérée", "Très altérée")
+)
+demog$tempsprof <- factor(demog$tempsprof,
+  levels = c("Temps plein", "Temps partiel", "Mi-temps thérapeutique")
+)
+#
+demog_nom <- debutph("datas/noms_consult1.csv")
+dnom <- demog_nom$nom
+```
+
+
+L'échantillon comporte `r nrow(demog)` cas. Il faut noter la très faible qualité des données avec énormément de données manquantes. Par exemple sur les questions concernant l'activité des patients les données manquantes représentent la moitié des cas donc sont inexploitables. 
+
+### Variables démographiques
+
+
+```{r demog}
+tab1ph(demog,dnom, c(2:33))
+```
+## Critère principal
+
+Le critère principal est la baisse de la douleur évaluée par le score numérique de la douleur maximale. On donne néanmoins les résultats pour les douleurs minimales, moyennes & maximales.
+
+```{r iconsult}
+consult <- debutph("datas/consulty.csv")
+ consult$consultdte <- dmy(consult$consultdte)
+consult$evadte <- dmy(consult$evadte)
+consult$evaldoulmax <- as.numeric(as.character(consult$evaldoulmax))
+consult$evaldoulmin <- as.numeric(as.character(consult$evaldoulmin))
+consult$evaldoulmoy <- as.numeric(as.character(consult$evaldoulmoy))
+consult$dmmin <- as.numeric(as.character(consult$dmmin))
+consult$ddscm <- as.numeric(as.character(consult$ddscm))
+consult$qtevie <- as.numeric(as.character(consult$qtevie))
+#
+consultn <- debutph("datas/consultn.csv")
+consultn <- consultn$nom
+consult$qteviealt <- consult$qteviealt %>%
+  fct_relevel(
+    "Normale", "Altérée", "Très altérée"
+  )
+
+```
+
+```{r tabp}
+conc1 <- consult[,c(1,2,14:16)] |> 
+  pivot_wider(names_from= visit, values_from = c(evaldoulmin,evaldoulmoy, evaldoulmax)) |> 
+  clean_names()
+
+conct <- conc1 |> 
+  mutate(minimale  =  evaldoulmin_derniere_consultation - evaldoulmin_consultation_1) |> 
+  mutate(moyenne  =  evaldoulmoy_derniere_consultation - evaldoulmoy_consultation_1) |>  
+  mutate(maximale  =  evaldoulmax_derniere_consultation - evaldoulmax_consultation_1) 
+#
+conc <- conct |> 
+  select(c(1,11:13)) |> 
+  pivot_longer(!id, names_to = "score.douleur", values_to = "score")
+conc$score.douleur<- conc$score.douleur %>%
+  fct_relevel(
+    "minimale", "moyenne", "maximale"
+  ) 
+
+conc |>  group_by(score.douleur) |> 
+  summarise(nombre = length(na.omit(score)),
+    médiane = median(score, na.rm = TRUE),
+    quartiles = paste0(quantile(score, na.rm = TRUE)[2]," ; ",quantile(score, na.rm = TRUE)[4]),
+    p.value = beaup(t.test(score)$p.value)
+    ) |> 
+  kable(booktabs = T, caption = "Évolution des scores de douleur") |> 
+  kable_styling(position = "center",latex_options = c("striped", "hold_position"))
+```
+
+```{r}
+#| label: maxfig1
+#| fig-cap: "Évolution des scores de douleur"
+conc |> 
+  ggplot() +
+  aes(x = score.douleur, y = score, fill = score.douleur) +
+  geom_hline(yintercept=0, linetype="dashed") +
+  geom_violin() +
+  geom_boxplot(fill = "white", width = 0.25) +
+  labs(title = "Évolution des scores de douleur",
+       subtitle = "",
+       x = "Score de douleur quotidienne",
+       y = " Variation du score",
+       caption = "Évolution des scores de douleur",
+       label = "max") +
+  theme_light() +
+  ggsci::scale_fill_lancet() +
+  scale_y_continuous("Variation du score", breaks = seq(-10,10,2),labels = seq(-10,10,2)) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(
+      size = 12
+    ),
+    axis.text.x = element_text(
+      size = 12
+    ),
+    axis.text.y = element_text(size = 12),
+    legend.position = "none"
+  )
+```
+
+```{r}
+#| label: maxfig2
+#| fig-cap: "Évolution du score maximum par patient"
+concmax <- conc1[,c(1,8:10)] 
+names(concmax) <- c("id","Consultation.1", "consultation. intermédiaire", "consultation.finale") 
+concmax <- concmax |> 
+pivot_longer(!id, names_to = "consultation", values_to = "score") 
+## Réordonnancement de concmax$consultation
+concmax$consultation <- concmax$consultation %>%
+  fct_relevel(
+    "Consultation.1", "consultation. intermédiaire", "consultation.finale"
+  )
+
+  ggplot(concmax) +
+  aes(x = consultation, y = score, colour = id) +
+  geom_point() +
+#  geom_line(aes(group = id)) +
+  geom_hline(0) 
+
+  )
+```
+
+```{r gpal}
+#| label: max3
+#| fig-cap: "Évolution des scores selon la douleur initiale"
+dcor <- cor.test(conct$evaldoulmax_consultation_1, conct$maximale)$p.value
+dcor <- beaup(dcor,affp = 1)
+conct |> 
+  ggplot() +
+  aes(x = evaldoulmax_consultation_1, y = maximale) +
+  geom_smooth(method = lm) +
+  geom_point() +
+  geom_hline(yintercept=0, linetype="dashed") +
+  geom_text(x = 6, y = .5, label = dcor, size = 6) +
+    labs(title = "Évolution des scores selon la douleur initiale",
+       subtitle = "n = 31",
+       x = "Douleur maximale avant (échelle numérique)",
+       y = " Évolution du score de douleur maximal",
+       caption = "Évolution des scores selon la douleur initiale",
+       label = "max3") +
+  theme_light() +
+  ggsci::scale_fill_lancet() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(
+      size = 12
+    ),
+    axis.text.x = element_text(
+      size = 12
+    ),
+    axis.text.y = element_text(size = 12),
+    legend.position = "none"
+  )
+```
+ Vu le faible nombre de cas il n'est pas possible de montrer une corrélation entre le niveau de douleur initiale & le gain apporté par la yoga-thérapie.
+ 
+## Facteurs favorisants
+
+On recherche des critères prédictifs d'efficacité de la yoga-thérapie. Vu le très faible nombre de cas (31 exploitables) ces résultats ne sont qu'indicatifs en particulier pour les localisations des douleurs.
+```{r pred1}
+tt <- left_join(demog,conct, by = "id")
+```
+
+```{r tpred2}
+tabx <- NULL 
+ligx <- c(3:10,12:33)
+for (i in ligx){
+slig <- sum(table(pull(tt[i]), tt$maximale))
+vv <- pull(tt[,i])
+ll <- anova(lm(tt$maximale~vv))
+lig <- c(as.character(dnom[i]), slig,beaup(ll[[5]][1]))
+tabx <- rbind(tabx,lig)
+}
+kbl(
+  tabx,
+  row.names = FALSE,
+  col.names = c(" ","n", "p.value"),
+  caption = "Facteurs prédictifs de la réponse à la yoga-thérapie",
+  label = "pred",
+  escape = FALSE,
+  booktabs = TRUE,
+  longtable = TRUE,
+  linesep = ""
+) |>
+  kable_styling(
+    latex_options = c("repeat_header", "hold_position", "striped"),
+    full_width = FALSE,
+    position = "center",
+    fixed_thead = TRUE
+  )  |>
+  scroll_box(width = "100%", height = "850px")
+
+```
+ 
+ Les tableaux & graphiques ne seront tracés que pour les variables `sexe` & `douleur neuropathique`, les résultats des autres variables ne sont pas utilisables en raison d'effectifs trop faibles.  À noter que les effectifs pour les variables de localisation (tête, cou etc.) sont faussement surévaluées.
+ 
+### Sexe
+```{r tsex}
+tabcph(tt, sex,nlignes = c(3,45), test = "med",fnote = " (n = 31)", nomvar = "Sexe", nomv = dnom)
+```
+
+```{r gsex}
+#| label: gsex
+#| fig-cap: "Évolution du score de douleur : sexe"
+tt |> 
+ggplot() +
+  aes(x = sex, y = maximale, fill = sex) +
+  geom_hline(yintercept=0, linetype="dashed") +
+geom_violin() +
+  geom_boxplot(fill = "white", width = 0.25) +
+  labs(title = "Évolution du score de douleur :  sexe",
+       subtitle = "n = 31",
+       y = " Variation du score",
+       caption = "Évolution du score de douleur :  sexe",
+       label = "sex") +
+  theme_light() +
+  ggsci::scale_fill_lancet() +
+  scale_y_continuous("Variation du score", breaks = seq(-10,10,2),labels = seq(-10,10,2)) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(
+      size = 12
+    ),
+    axis.text.x = element_text(
+      size = 12
+    ),
+    axis.text.y = element_text(size = 12),
+    legend.position = "none"
+  )
+```
+
+### Douleur neuropathique
+
+```{r}
+#| label: tdnp
+
+tabcph(tt, doulneuroon,nlignes = c(10,45), test = "med", fnote = " (n = 31)", nomvar = "Douleur neuropathique", nomv = dnom)
+```
+
+```{r gdnp}
+#| label: gdnp
+#| fig-cap: "Évolution du score de douleur : douleurs neuropathiques"
+tt |> 
+ggplot() +
+  aes(x = doulneuroon, y = maximale, fill = doulneuroon) +
+  geom_hline(yintercept=0, linetype="dashed") +
+geom_violin() +
+  geom_boxplot(fill = "white", width = 0.25) +
+  labs(title = "Évolution du score de douleur : douleurs neuropathiques",
+       subtitle = "n = 31",
+       x = "Douleur neuropathique",
+       y = " Variation du score",
+       caption = "Évolution du score de douleur : douleurs neuropathiques",
+       label = "sex") +
+  theme_light() +
+  ggsci::scale_fill_lancet() +
+  scale_y_continuous("Variation du score", breaks = seq(-10,10,2),labels = seq(-10,10,2)) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(
+      size = 12
+    ),
+    axis.text.x = element_text(
+      size = 12
+    ),
+    axis.text.y = element_text(size = 12),
+    legend.position = "none"
+  )
+```
+
+## Critères secondaires
+
+```{r}
+consult |> 
+  filter(visit !="CONSULTATION  Intermediaire") |> 
+  mutate(visit = factor(visit)) |> 
+tabcph(visit,c(2,17,24), nomv = consultn, test = "med")
+```
+
+
+### Amélioration du sommeil
+
+```{r gsommeil}
+consult |> 
+    filter(visit !="CONSULTATION  Intermediaire") |> 
+  mutate(visit = factor(visit)) |> 
+  barouiph(sommeilon,visit, 'oui', titre =" Troubles du sommeil")
+```
+
+
+### Évaluation de la qualité de vie
+
+```{r gqual}
+consult |> 
+    filter(visit !="CONSULTATION  Intermediaire") |> 
+  mutate(visit = factor(visit)) |> 
+  bardeuxph(qteviealt, visit)
+```
+
+### Diminution des thérapeutiques
+
+
+Les modifications notées de traitement sont rares & uniquement à la baisse :
+
+- Tramadol : 3
+- Codéine :2
+- Laroxyl : 1
+- Cymbalta : 1
+- Effexor : 1
+
+## Technique
+Les données démographiques on été décrites par la médiane & les quartiles pour les données numériques, en pourcentage pour les données catégorielles. Les intervalles de confiance ont été calculés par bootstrap.
+Pour le critère principal la comparaison des deux groupes a été réalisée par un test de Wilcoxon sur séries appariées. La recherche de facteurs prédictifs a été réalisée par des test ANOVA. Vu le grand nombre de tests la limite de significabilité a été définie à 0,01.
+
+L'analyse statistique a été réalisée grâce au logiciel **R**[@rstat] & à divers packages en particulier `tidyverse`[@tidy], `FactoMineR`[@facto] & `epiDisplay`[@epid].
