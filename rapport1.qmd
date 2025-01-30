@@ -30,18 +30,40 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = FA
 ```
 
 ```{r lib}
+rm(list = ls())
+classeur <- "yogado.ods"
+expx <- FALSE
+
+library(corrplot)
 library(baseph)
-library(janitor)
+library(GGally)
+library(ggsci)
+library(ggstats)
 library(tidyverse)
-library(lubridate)
+library(scales)
+library(ggridges)
 library(kableExtra)
+library(gtsummary)
+library(DataExplorer)
+library(colorspace)
+library(forestmodel)
+library(psych)
+library(janitor)
+library(labelled)
+
+# sessionInfo()
+theme_gtsummary_language(language = "fr", decimal.mark = ",")
+# theme_gtsummary_journal(journal = "jama")
+options(OutDec = ",")
+ptest <- list(all_continuous() ~ "wilcox.test", all_categorical() ~ "chisq.test")
 ```
 
 
 ## Description de la population
 
 ```{r demogi}
-demog <- read("datas/CONSULT1.csv")
+demog <- read_csv("datas/CONSULT1.csv") |> 
+  clean_names()
 demog$evadoulmax <- as.numeric(as.character(demog$evadoulmax))
 demog$evadoulmin <- as.numeric(as.character(demog$evadoulmin))
 demog$evadoulmoy <- as.numeric(as.character(demog$evadoulmoy))
@@ -55,8 +77,10 @@ demog$tempsprof <- factor(demog$tempsprof,
   levels = c("Temps plein", "Temps partiel", "Mi-temps thérapeutique")
 )
 #
-demog_nom <- debutph("datas/noms_consult1.csv")
+demog_nom <- read_csv("datas/noms_consult1.csv") |> 
+  clean_names()
 dnom <- demog_nom$nom
+var_label(demog) <- dnom
 ```
 
 
@@ -66,7 +90,20 @@ L'échantillon comporte `r nrow(demog)` cas. Il faut noter la très faible quali
 
 
 ```{r demog}
-tab1ph(demog,dnom, c(2:33))
+#| label: tbl-demo1
+#| tbl-cap: Description
+
+demog |> 
+  dplyr::select(2:33) |> 
+  tbl_summary(missing = "no",
+              type = list(
+                c(evadoulmin, evadoulmax,evadoulmoy,qtevie ) ~ "continuous", 
+                c(sporton:voyagon,doulrhumon:doullocauton,sommeilon:humeuron) ~ "dichotomous"),
+              value = list(c(sporton:voyagon,doulrhumon:doullocauton,sommeilon:humeuron) ~ "Oui")
+              ) |> 
+      bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "demog1", lg = TRUE) 
 ```
 ## Critère principal
 
@@ -112,14 +149,20 @@ conc$score.douleur<- conc$score.douleur %>%
     "minimale", "moyenne", "maximale"
   ) 
 
-conc |>  group_by(score.douleur) |> 
+zz <- conc |>  group_by(score.douleur) |> 
   summarise(nombre = length(na.omit(score)),
     médiane = median(score, na.rm = TRUE),
     quartiles = paste0(quantile(score, na.rm = TRUE)[2]," ; ",quantile(score, na.rm = TRUE)[4]),
     p.value = beaup(t.test(score)$p.value)
-    ) |> 
-  kable(booktabs = T, caption = "Évolution des scores de douleur") |> 
+    ) 
+ zz |> 
+   kable(booktabs = T, caption = "Évolution des scores de douleur") |> 
   kable_styling(position = "center",latex_options = c("striped", "hold_position"))
+      if (expx) {
+        zz |> 
+        as_tibble() |>
+        write_ods(path = classeur, sheet = evol_doul, append = TRUE)
+    }
 ```
 
 ```{r}
@@ -130,7 +173,7 @@ conc |>
   aes(x = score.douleur, y = score, fill = score.douleur) +
   geom_hline(yintercept=0, linetype="dashed") +
   geom_violin() +
-  geom_boxplot(fill = "white", width = 0.25) +
+  geom_boxplot(fill = "grey90", width = 0.25) +
   labs(title = "Évolution des scores de douleur",
        subtitle = "",
        x = "Score de douleur quotidienne",
@@ -171,10 +214,31 @@ concmax$consultation <- concmax$consultation %>%
   ggplot(concmax) +
   aes(x = consultation, y = score, colour = id) +
   geom_point() +
-#  geom_line(aes(group = id)) +
-  geom_hline(0) 
+ geom_line(aes(group = id)) +
+  geom_hline(yintercept =  0) +
+    labs(title = "Évolution du score maximum par patient",
+        subtitle = "",
+        x = "",
+        y = "EN",
+        caption = "",
+        fill = "") +
+    theme_light() +
+    scale_fill_jama() +
+    theme(
+      plot.title = element_text(size = 14, face = "bold"),
+      plot.subtitle = element_text(size = 12),
+      axis.title.x = element_blank(),
+      legend.title = element_text(size = 12),
+      axis.title.y = element_text(
+        size = 12,
+        angle = 0,
+        vjust = .5
+      ),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    legend.position = "none"
+    )
 
-  )
 ```
 
 ```{r gpal}
@@ -246,16 +310,28 @@ kbl(
     full_width = FALSE,
     position = "center",
     fixed_thead = TRUE
-  )  |>
-  scroll_box(width = "100%", height = "850px")
-
+  )  
+      if (expx) {
+        tabx |> 
+        as_tibble() |>
+        write_ods(path = classeur, sheet = fact1, append = TRUE)
+    }
 ```
  
  Les tableaux & graphiques ne seront tracés que pour les variables `sexe` & `douleur neuropathique`, les résultats des autres variables ne sont pas utilisables en raison d'effectifs trop faibles.  À noter que les effectifs pour les variables de localisation (tête, cou etc.) sont faussement surévaluées.
  
 ### Sexe
 ```{r tsex}
-tabcph(tt, sex,nlignes = c(3,45), test = "med",fnote = " (n = 31)", nomvar = "Sexe", nomv = dnom)
+tt |> 
+  dplyr::select(sex,minimale:maximale) |> 
+  tbl_summary(by = sex,
+              missing = "no",
+               type = list(
+                c(minimale, moyenne) ~ "continuous")) |> 
+  add_p() |> 
+        bold_labels() |> 
+   modify_header(label ~ "**Douleur**") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "sexe", lg = TRUE)
 ```
 
 ```{r gsex}
@@ -294,8 +370,18 @@ geom_violin() +
 
 ```{r}
 #| label: tdnp
+tt |> 
+  dplyr::select(doulneuroon,minimale:maximale) |> 
+  tbl_summary(by = doulneuroon,
+              missing = "no",
+               type = list(
+                c(minimale, moyenne) ~ "continuous")) |> 
+  add_p() |> 
+        bold_labels() |> 
+  modify_spanning_header(c("stat_1", "stat_2") ~ "**Douleur neuropathique**") |>
+   modify_header(label ~ "**Douleur**") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "neurop", lg = TRUE)
 
-tabcph(tt, doulneuroon,nlignes = c(10,45), test = "med", fnote = " (n = 31)", nomvar = "Douleur neuropathique", nomv = dnom)
 ```
 
 ```{r gdnp}
@@ -337,7 +423,20 @@ geom_violin() +
 consult |> 
   filter(visit !="CONSULTATION  Intermediaire") |> 
   mutate(visit = factor(visit)) |> 
-tabcph(visit,c(2,17,24), nomv = consultn, test = "med")
+  dplyr::select(visit,sommeilon,qteviealt) |> 
+  tbl_summary(by = visit, 
+              missing = "no",
+              list(sommeilon = "troubles du sommeil", qteviealt =" Qualité de vie")) |> 
+    add_p(ptest <- list(all_continuous() ~ "wilcox.test", all_categorical() ~ "chisq.test")) |> 
+  add_n() |> 
+        bold_labels() |> 
+  modify_spanning_header(c("stat_1", "stat_2") ~ "**Douleur neuropathique**") |>
+   modify_header(label ~ "") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "evol", lg = TRUE)
+
+
+ 
+#tabcph(visit,c(2,17,24), nomv = consultn, test = "med")
 ```
 
 
