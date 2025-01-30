@@ -1,0 +1,14 @@
+---
+title: "Douleur & Micronutriments"
+author: "Philippe MICHEL"
+format: html
+lang: fr
+---
+
+ Comparaison yogath vs yogath + micronutrition "fine"
+ 
+ Critère principal 
+ 
+ - Un critère douleur (EVS ? Activité ?)
+ - un critère biologique d'inflammation (CRP US)
+ - Échelle de qualité de vie ? 

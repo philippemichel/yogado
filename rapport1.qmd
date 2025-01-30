@@ -6,10 +6,9 @@ author: "Philippe MICHEL"
 format: pdf
 pdf-engine: lualatex
 documentclass: scrartcl
-mainfont: GaramondPremrPro
+mainfont: arsenal
 mainfontoptions:
 - Ligatures = Common
-- Ligatures = Rare
 sansfont: Source Sans Pro
 monofont: Source Sans Pro
 colorlinks: true
@@ -42,7 +41,7 @@ library(kableExtra)
 ## Description de la population
 
 ```{r demogi}
-demog <- debutph("datas/CONSULT1.csv")
+demog <- read("datas/CONSULT1.csv")
 demog$evadoulmax <- as.numeric(as.character(demog$evadoulmax))
 demog$evadoulmin <- as.numeric(as.character(demog$evadoulmin))
 demog$evadoulmoy <- as.numeric(as.character(demog$evadoulmoy))
@@ -74,7 +73,8 @@ tab1ph(demog,dnom, c(2:33))
 Le critère principal est la baisse de la douleur évaluée par le score numérique de la douleur maximale. On donne néanmoins les résultats pour les douleurs minimales, moyennes & maximales.
 
 ```{r iconsult}
-consult <- debutph("datas/consulty.csv")
+consult <- read_csv("datas/consulty.csv") |> 
+  clean_names()
  consult$consultdte <- dmy(consult$consultdte)
 consult$evadte <- dmy(consult$evadte)
 consult$evaldoulmax <- as.numeric(as.character(consult$evaldoulmax))
@@ -84,7 +84,8 @@ consult$dmmin <- as.numeric(as.character(consult$dmmin))
 consult$ddscm <- as.numeric(as.character(consult$ddscm))
 consult$qtevie <- as.numeric(as.character(consult$qtevie))
 #
-consultn <- debutph("datas/consultn.csv")
+consultn <- read_csv("datas/consultn.csv") |> 
+   clean_names()
 consultn <- consultn$nom
 consult$qteviealt <- consult$qteviealt %>%
   fct_relevel(
